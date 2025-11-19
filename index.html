@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 수업 질문-답변</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #b2c7d9;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+        }
+
+        /* 로그인 화면 */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #b2c7d9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-box h1 {
+            color: #3c1e1e;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .role-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .role-btn.active {
+            background: #FEE500;
+            border-color: #FEE500;
+            font-weight: bold;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: #FEE500;
+            color: #3c1e1e;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .main-section, .stats-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        /* 선생님 컨트롤 */
+        .teacher-control {
+            background: #FEE500;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: #3c1e1e;
+        }
+
+        .teacher-control h2 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .teacher-settings {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .teacher-settings input {
+            width: 150px;
+            padding: 10px;
+            border: 2px solid #3c1e1e;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .teacher-settings button {
+            padding: 10px 20px;
+            background: #3c1e1e;
+            color: #FEE500;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .teacher-control input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #3c1e1e;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .teacher-control button.send-btn {
+            width: 100%;
+            padding: 12px;
+            background: #3c1e1e;
+            color: #FEE500;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .teacher-control button:hover {
+            transform: scale(1.02);
+        }
+
+        /* 학생 입장 */
+        .student-entry {
+            background: #FEE500;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: #3c1e1e;
+        }
+
+        .student-entry h2 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .student-entry p {
+            font-size: 14px;
+        }
+
+        /* 채팅 영역 */
+        .chat-area {
+            min-height: 300px;
+            max-height: 450px;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .question-bubble {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #FEE500;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .question-bubble h3 {
+            color: #3c1e1e;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .question-bubble p {
+            color: #333;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .answers-container {
+            margin-left: 20px;
+        }
+
+        .answer-bubble {
+            background: #FEE500;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            margin-left: auto;
+            max-width: 70%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .answer-bubble .student-name {
+            font-weight: bold;
+            color: #3c1e1e;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .answer-bubble .answer-text {
+            color: #333;
+            font-size: 14px;
+        }
+
+        /* 답변 입력 */
+        .answer-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .answer-input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .answer-input-area button {
+            padding: 12px 25px;
+            background: #FEE500;
+            color: #3c1e1e;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* 통계 영역 */
+        .stats-section h2 {
+            color: #3c1e1e;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .participation-stats {
+            background: #FEE500;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .participation-stats .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #3c1e1e;
+        }
+
+        .participation-stats .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3c1e1e;
+        }
+
+        .stat-box .label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* 워드클라우드 */
+        .wordcloud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .wordcloud-header button {
+            padding: 8px 15px;
+            background: #FEE500;
+            color: #3c1e1e;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .wordcloud {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 150px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .word {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            transition: transform 0.2s;
+            cursor: default;
+            background: #FEE500;
+            color: #3c1e1e;
+        }
+
+        .word:hover {
+            transform: scale(1.1);
+        }
+
+        /* 워드클라우드 전체화면 모달 */
+        .wordcloud-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .wordcloud-modal.active {
+            display: flex;
+        }
+
+        .wordcloud-modal-content {
+            width: 90%;
+            height: 90%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+        }
+
+        .wordcloud-modal h2 {
+            color: #3c1e1e;
+            margin-bottom: 30px;
+            font-size: 32px;
+            text-align: center;
+        }
+
+        .wordcloud-modal .wordcloud {
+            height: calc(100% - 100px);
+            font-size: 1.5em;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 12px 25px;
+            background: #FEE500;
+            color: #3c1e1e;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* 히스토리 */
+        .history-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .history-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .history-item h4 {
+            color: #3c1e1e;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .history-answers {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .setup-notice {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .setup-notice h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .setup-notice ol {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .setup-notice li {
+            margin-bottom: 8px;
+        }
+
+        .setup-notice code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <!-- 로그인 화면 -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>🎓 실시간 수업 참여</h1>
+            <div class="role-buttons">
+                <button class="role-btn" id="teacherRoleBtn" onclick="selectRole('teacher')">선생님</button>
+                <button class="role-btn" id="studentRoleBtn" onclick="selectRole('student')">학생</button>
+            </div>
+            <div id="loginInputs"></div>
+        </div>
+    </div>
+
+    <!-- 워드클라우드 전체화면 모달 -->
+    <div class="wordcloud-modal" id="wordcloudModal">
+        <div class="wordcloud-modal-content">
+            <button class="close-modal" onclick="closeWordcloudModal()">닫기</button>
+            <h2>☁️ 답변 키워드 클라우드</h2>
+            <div class="wordcloud" id="wordcloudModalContent"></div>
+        </div>
+    </div>
+
+    <div class="container hidden" id="mainContainer">
+        <!-- 메인 섹션 -->
+        <div class="main-section">
+            <!-- Firebase 설정 안내 -->
+            <div class="setup-notice" id="setupNotice">
+                <h3>⚠️ Firebase 설정이 필요합니다</h3>
+                <p style="margin-bottom: 10px;">이 앱을 사용하려면 Firebase 프로젝트가 필요합니다:</p>
+                <ol>
+                    <li><a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>에서 새 프로젝트 생성</li>
+                    <li>Realtime Database 활성화 (테스트 모드로 시작)</li>
+                    <li>웹 앱 추가 후 설정 정보 복사</li>
+                    <li>아래 코드의 <code>firebaseConfig</code> 객체를 본인의 설정으로 교체</li>
+                </ol>
+            </div>
+
+            <!-- 선생님 컨트롤 -->
+            <div class="teacher-control hidden" id="teacherControl">
+                <h2>🎓 선생님 질문하기</h2>
+                <div class="teacher-settings">
+                    <input type="number" id="totalStudentsInput" placeholder="전체 학생 수" min="1">
+                    <button onclick="setTotalStudents()">학생 수 설정</button>
+                </div>
+                <input type="text" id="questionInput" placeholder="학생들에게 질문을 입력하세요...">
+                <button class="send-btn" onclick="askQuestion()">질문 보내기</button>
+            </div>
+
+            <!-- 학생 정보 표시 -->
+            <div class="student-entry hidden" id="studentInfo"></div>
+
+            <!-- 채팅 영역 -->
+            <div class="chat-area" id="chatArea">
+                <p style="text-align: center; color: #999; padding: 50px 0;">
+                    선생님의 질문을 기다리고 있습니다...
+                </p>
+            </div>
+
+            <!-- 답변 입력 -->
+            <div class="answer-input-area hidden" id="answerInputArea">
+                <input type="text" id="answerInput" placeholder="답변을 입력하세요...">
+                <button onclick="submitAnswer()">답변 제출</button>
+            </div>
+
+            <!-- 히스토리 -->
+            <div class="history-section" id="historySection">
+                <h2>📚 이전 질문 기록</h2>
+                <div id="historyList"></div>
+            </div>
+        </div>
+
+        <!-- 통계 섹션 -->
+        <div class="stats-section">
+            <h2>📊 참여 현황</h2>
+            
+            <div class="participation-stats">
+                <div class="stat-number" id="answerCount">0</div>
+                <div class="stat-label">현재 답변 수</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="number" id="studentCount">0</div>
+                    <div class="label">전체 학생</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number" id="answeredCount">0</div>
+                    <div class="label">답변 완료</div>
+                </div>
+            </div>
+
+            <div class="wordcloud-header">
+                <h2>☁️ 키워드 클라우드</h2>
+                <button onclick="openWordcloudModal()">크게 보기</button>
+            </div>
+            <div class="wordcloud" id="wordcloud">
+                <p style="color: #999;">답변이 모이면 키워드가 표시됩니다</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <script>
+        // ⚠️ 여기에 본인의 Firebase 설정을 입력하세요!
+        const firebaseConfig = {
+  apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
+  authDomain: "qa-classroom.firebaseapp.com",
+  databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "qa-classroom",
+  storageBucket: "qa-classroom.firebasestorage.app",
+  messagingSenderId: "994599583786",
+  appId: "1:994599583786:web:62a41f1f376688d4788353"
+}
+
+        // Firebase 초기화
+        let database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            console.log("Firebase 연결 성공!");
+        } catch (error) {
+            console.error("Firebase 연결 실패:", error);
+            alert("Firebase 설정이 필요합니다. 콘솔을 확인하세요.");
+        }
+
+        let userRole = null;
+        let currentStudent = null;
+        let totalStudents = 0;
+
+        // 역할 선택
+        function selectRole(role) {
+            userRole = role;
+            document.getElementById('teacherRoleBtn').classList.remove('active');
+            document.getElementById('studentRoleBtn').classList.remove('active');
+            
+            if (role === 'teacher') {
+                document.getElementById('teacherRoleBtn').classList.add('active');
+                document.getElementById('loginInputs').innerHTML = `
+                    <input type="password" id="passwordInput" placeholder="비밀번호 입력">
+                    <button onclick="loginTeacher()">로그인</button>
+                `;
+            } else {
+                document.getElementById('studentRoleBtn').classList.add('active');
+                document.getElementById('loginInputs').innerHTML = `
+                    <input type="text" id="nicknameInput" placeholder="닉네임 입력">
+                    <button onclick="loginStudent()">입장하기</button>
+                `;
+            }
+        }
+
+        // 선생님 로그인
+        function loginTeacher() {
+            const password = document.getElementById('passwordInput').value;
+            if (password === 'teacher1234') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainContainer').classList.remove('hidden');
+                document.getElementById('teacherControl').classList.remove('hidden');
+                
+                // Firebase 설정 확인
+                if (!database || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    document.getElementById('setupNotice').style.display = 'block';
+                } else {
+                    document.getElementById('setupNotice').style.display = 'none';
+                    loadSettings();
+                    listenToCurrentQuestion();
+                    listenToAnswers();
+                    listenToHistory();
+                }
+            } else {
+                alert('비밀번호가 틀렸습니다!');
+            }
+        }
+
+        // 학생 로그인
+        function loginStudent() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            if (!nickname) {
+                alert('닉네임을 입력해주세요!');
+                return;
+            }
+
+            currentStudent = nickname;
+
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContainer').classList.remove('hidden');
+            document.getElementById('studentInfo').classList.remove('hidden');
+            document.getElementById('studentInfo').innerHTML = `
+                <h2>👋 환영합니다, ${nickname}님!</h2>
+                <p style="margin-top: 5px;">선생님의 질문에 답변해주세요.</p>
+            `;
+
+            if (!database || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                document.getElementById('setupNotice').style.display = 'block';
+            } else {
+                document.getElementById('setupNotice').style.display = 'none';
+                // 학생 등록
+                database.ref('students/' + nickname).set({
+                    name: nickname,
+                    timestamp: Date.now()
+                });
+
+                loadSettings();
+                listenToCurrentQuestion();
+                listenToAnswers();
+                listenToHistory();
+            }
+        }
+
+        // 전체 학생 수 설정
+        function setTotalStudents() {
+            const count = parseInt(document.getElementById('totalStudentsInput').value);
+            if (count > 0) {
+                database.ref('settings/totalStudents').set(count);
+                alert(`전체 학생 수가 ${count}명으로 설정되었습니다.`);
+            } else {
+                alert('1 이상의 숫자를 입력해주세요!');
+            }
+        }
+
+        // 설정 불러오기
+        function loadSettings() {
+            database.ref('settings').on('value', (snapshot) => {
+                const settings = snapshot.val();
+                if (settings) {
+                    totalStudents = settings.totalStudents || 0;
+                    updateStats();
+                }
+            });
+
+            database.ref('students').on('value', (snapshot) => {
+                updateStats();
+            });
+        }
+
+        // 질문하기
+        function askQuestion() {
+            const question = document.getElementById('questionInput').value.trim();
+            if (!question) {
+                alert('질문을 입력해주세요!');
+                return;
+            }
+
+            // 현재 질문을 히스토리로 이동
+            database.ref('currentQuestion').once('value', (snapshot) => {
+                const oldQuestion = snapshot.val();
+                if (oldQuestion && oldQuestion.text) {
+                    // 답변이 있으면 히스토리에 저장
+                    database.ref('answers').once('value', (answerSnapshot) => {
+                        const answers = answerSnapshot.val();
+                        if (answers) {
+                            const historyRef = database.ref('history').push();
+                            historyRef.set({
+                                question: oldQuestion.text,
+                                answers: answers,
+                                timestamp: Date.now()
+                            });
+                        }
+                    });
+                }
+            });
+
+            // 새 질문 설정
+            database.ref('currentQuestion').set({
+                text: question,
+                timestamp: Date.now()
+            });
+
+            // 답변 초기화
+            database.ref('answers').remove();
+
+            document.getElementById('questionInput').value = '';
+        }
+
+        // 현재 질문 듣기
+        function listenToCurrentQuestion() {
+            database.ref('currentQuestion').on('value', (snapshot) => {
+                const question = snapshot.val();
+                if (question && question.text) {
+                    const chatArea = document.getElementById('chatArea');
+                    chatArea.innerHTML = `
+                        <div class="question-bubble">
+                            <h3>선생님의 질문</h3>
+                            <p>${question.text}</p>
+                        </div>
+                        <div class="answers-container" id="answersContainer"></div>
+                    `;
+
+                    if (currentStudent) {
+                        document.getElementById('answerInputArea').classList.remove('hidden');
+                    }
+
+                    // 기존 답변 다시 표시
+                    listenToAnswers();
+                }
+            });
+        }
+
+        // 답변 듣기
+        function listenToAnswers() {
+            database.ref('answers').on('value', (snapshot) => {
+                const answersContainer = document.getElementById('answersContainer');
+                if (answersContainer) {
+                    answersContainer.innerHTML = '';
+                    
+                    const answers = snapshot.val();
+                    if (answers) {
+                        Object.values(answers).forEach(answer => {
+                            const answerBubble = document.createElement('div');
+                            answerBubble.className = 'answer-bubble';
+                            answerBubble.innerHTML = `
+                                <div class="student-name">${answer.student}</div>
+                                <div class="answer-text">${answer.text}</div>
+                            `;
+                            answersContainer.appendChild(answerBubble);
+                        });
+
+                        // 스크롤
+                        const chatArea = document.getElementById('chatArea');
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    }
+                    
+                    updateStats();
+                    updateWordcloud();
+                }
+            });
+        }
+
+        // 답변 제출
+        function submitAnswer() {
+            if (!currentStudent) {
+                alert('먼저 닉네임을 입력하고 입장해주세요!');
+                return;
+            }
+
+            const answerText = document.getElementById('answerInput').value.trim();
+            if (!answerText) {
+                alert('답변을 입력해주세요!');
+                return;
+            }
+
+            // 중복 답변 체크
+            database.ref('answers').once('value', (snapshot) => {
+                const answers = snapshot.val();
+                if (answers) {
+                    const alreadyAnswered = Object.values(answers).some(a => a.student === currentStudent);
+                    if (alreadyAnswered) {
+                        alert('이미 이 질문에 답변하셨습니다!');
+                        return;
+                    }
+                }
+
+                // 답변 저장
+                const answerRef = database.ref('answers').push();
+                answerRef.set({
+                    student: currentStudent,
+                    text: answerText,
+                    timestamp: Date.now()
+                });
+
+                document.getElementById('answerInput').value = '';
+            });
+        }
+
+        // 히스토리 듣기
+        function listenToHistory() {
+            database.ref('history').on('value', (snapshot) => {
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = '';
+
+                const history = snapshot.val();
+                if (history) {
+                    const historyArray = Object.values(history).sort((a, b) => b.timestamp - a.timestamp);
+                    
+                    historyArray.forEach((item, index) => {
+                        const answerCount = item.answers ? Object.keys(item.answers).length : 0;
+                        const students = item.answers ? Object.values(item.answers).map(a => a.student).join(', ') : '없음';
+                        
+                        const historyItem = document.createElement('div');
+                        historyItem.className = 'history-item';
+                        historyItem.innerHTML = `
+                            <h4>질문: ${item.question}</h4>
+                            <div class="history-answers">
+                                답변 ${answerCount}개: ${students}
+                            </div>
+                        `;
+                        historyList.appendChild(historyItem);
+                    });
+                }
+            });
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            database.ref('students').once('value', (snapshot) => {
+                const students = snapshot.val();
+                const studentCount = students ? Object.keys(students).length : 0;
+                document.getElementById('studentCount').textContent = totalStudents || studentCount;
+            });
+
+            database.ref('answers').once('value', (snapshot) => {
+                const answers = snapshot.val();
+                const answerCount = answers ? Object.keys(answers).length : 0;
+                document.getElementById('answerCount').textContent = answerCount;
+                
+                const uniqueStudents = answers ? new Set(Object.values(answers).map(a => a.student)).size : 0;
+                document.getElementById('answeredCount').textContent = uniqueStudents;
+            });
