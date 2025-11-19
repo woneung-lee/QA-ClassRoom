@@ -3,951 +3,754 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 수업 질문-답변</title>
+    <title>실시간 인터랙티브 클래스</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color: #FEE500; /* 카카오 옐로우 */
+            --primary-dark: #F3D000;
+            --text-color: #3b1e1e;    /* 카카오 브라운 */
+            --bg-color: #b2c7d9;      /* 채팅방 배경색 */
+            --white: #ffffff;
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background: #b2c7d9;
-            min-height: 100vh;
-            padding: 15px;
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 15px;
-        }
+        /* 유틸리티: 숨김 처리 */
+        .hidden { display: none !important; }
 
-        /* 로그인 화면 */
-        .login-screen {
+        /* 토스트 알림 */
+        #toast-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #b2c7d9;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+        }
+        .toast {
+            background: rgba(59, 30, 30, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: slideDown 0.3s ease-out;
+            font-size: 14px;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 1. 로그인 화면 */
+        .login-wrapper {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             z-index: 1000;
         }
-
-        .login-box {
-            background: white;
+        .login-card {
+            background: var(--white);
             padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 400px;
+            border-radius: 20px;
             width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: var(--shadow);
         }
-
-        .login-box h1 {
-            color: #3c1e1e;
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
-
-        .role-buttons {
+        .login-card h1 { margin-bottom: 30px; font-size: 24px; }
+        
+        .role-tabs {
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .role-btn {
-            flex: 1;
-            padding: 15px;
-            border: 2px solid #ddd;
-            background: white;
+            background: #eee;
+            padding: 5px;
             border-radius: 10px;
-            font-size: 16px;
+            margin-bottom: 25px;
+        }
+        .role-tab {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
             cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #777;
             transition: all 0.3s;
         }
-
-        .role-btn.active {
-            background: #FEE500;
-            border-color: #FEE500;
-            font-weight: bold;
-        }
-
-        .login-box input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-
-        .login-box button {
-            width: 100%;
-            padding: 12px;
-            background: #FEE500;
-            color: #3c1e1e;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .main-section, .stats-section {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        /* 선생님 컨트롤 */
-        .teacher-control {
-            background: #FEE500;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            color: #3c1e1e;
-        }
-
-        .teacher-control h2 {
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-
-        .teacher-settings {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .teacher-settings input {
-            width: 150px;
-            padding: 10px;
-            border: 2px solid #3c1e1e;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .teacher-settings button {
-            padding: 10px 20px;
-            background: #3c1e1e;
-            color: #FEE500;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .teacher-control input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #3c1e1e;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .teacher-control button.send-btn {
-            width: 100%;
-            padding: 12px;
-            background: #3c1e1e;
-            color: #FEE500;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .teacher-control button:hover {
-            transform: scale(1.02);
-        }
-
-        /* 학생 입장 */
-        .student-entry {
-            background: #FEE500;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            color: #3c1e1e;
-        }
-
-        .student-entry h2 {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-
-        .student-entry p {
-            font-size: 14px;
-        }
-
-        /* 채팅 영역 */
-        .chat-area {
-            min-height: 300px;
-            max-height: 450px;
-            overflow-y: auto;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-
-        .question-bubble {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border: 2px solid #FEE500;
+        .role-tab.active {
+            background: var(--white);
+            color: var(--text-color);
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .question-bubble h3 {
-            color: #3c1e1e;
-            margin-bottom: 8px;
-            font-size: 12px;
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            transition: border-color 0.3s;
         }
-
-        .question-bubble p {
-            color: #333;
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: bold;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+
+        /* 2. 메인 레이아웃 */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 100vh;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 20px;
         }
 
-        .answers-container {
-            margin-left: 20px;
+        /* 왼쪽: 채팅/질문 영역 */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 15px;
         }
 
-        .answer-bubble {
-            background: #FEE500;
-            padding: 12px 15px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            margin-left: auto;
-            max-width: 70%;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            animation: slideIn 0.3s ease-out;
+        .panel-box {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: var(--shadow);
         }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        /* 선생님 컨트롤 */
+        .teacher-controls {
+            background: var(--primary-color);
+            border: none;
         }
-
-        .answer-bubble .student-name {
+        .control-row { display: flex; gap: 10px; margin-top: 10px; }
+        .control-row input { flex: 1; padding: 10px; border-radius: 8px; border: none; }
+        .control-row button { 
+            padding: 10px 20px; 
+            background: var(--text-color); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
             font-weight: bold;
-            color: #3c1e1e;
-            margin-bottom: 5px;
+        }
+
+        /* 채팅 영역 */
+        .chat-window {
+            flex: 1;
+            overflow-y: auto;
+            background: #abc1d1; /* 채팅창 내부 배경 */
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 메시지 버블 스타일 */
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 12px;
+            position: relative;
+            animation: fadeIn 0.3s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message .sender {
             font-size: 12px;
+            margin-bottom: 4px;
+            opacity: 0.7;
+        }
+        .message .text {
+            font-size: 15px;
+            line-height: 1.4;
+            word-break: break-all;
         }
 
-        .answer-bubble .answer-text {
-            color: #333;
-            font-size: 14px;
+        /* 선생님 질문 (중앙) */
+        .msg-teacher {
+            align-self: center;
+            background: var(--white);
+            border: 2px solid var(--primary-color);
+            width: 90%;
+            max-width: 90%;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .msg-teacher .sender { color: var(--text-color); font-weight: bold; }
+        .msg-teacher .text { font-size: 18px; font-weight: bold; }
+
+        /* 다른 학생 답변 (왼쪽) */
+        .msg-other {
+            align-self: flex-start;
+            background: var(--white);
+            border-top-left-radius: 0;
         }
 
-        /* 답변 입력 */
-        .answer-input-area {
+        /* 내 답변 (오른쪽) */
+        .msg-me {
+            align-self: flex-end;
+            background: var(--primary-color);
+            border-top-right-radius: 0;
+        }
+
+        /* 입력바 */
+        .input-bar {
             display: flex;
             gap: 10px;
+            padding: 10px;
+            background: var(--white);
+            border-radius: 15px;
         }
-
-        .answer-input-area input {
+        .input-bar input {
             flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .answer-input-area button {
-            padding: 12px 25px;
-            background: #FEE500;
-            color: #3c1e1e;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 20px;
+        }
+        .input-bar button {
+            background: var(--primary-color);
+            border: none;
+            width: 50px;
+            border-radius: 15px;
             cursor: pointer;
+            font-size: 20px;
         }
 
-        /* 통계 영역 */
-        .stats-section h2 {
-            color: #3c1e1e;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-
-        .participation-stats {
-            background: #FEE500;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .participation-stats .stat-number {
-            font-size: 36px;
-            font-weight: bold;
-            color: #3c1e1e;
-        }
-
-        .participation-stats .stat-label {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
+        /* 오른쪽: 통계/워드클라우드 */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: 100%;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-bottom: 15px;
         }
-
-        .stat-box {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-box .number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #3c1e1e;
-        }
-
-        .stat-box .label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        /* 워드클라우드 */
-        .wordcloud-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .wordcloud-header button {
-            padding: 8px 15px;
-            background: #FEE500;
-            color: #3c1e1e;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .wordcloud {
-            background: #f8f9fa;
+        .stat-card {
+            background: var(--white);
             padding: 15px;
-            border-radius: 10px;
-            min-height: 150px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .stat-num { font-size: 28px; font-weight: bold; color: var(--text-color); }
+        .stat-label { font-size: 12px; color: #666; }
+
+        .wordcloud-box {
+            flex: 1;
+            background: var(--white);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .wordcloud-content {
+            flex: 1;
+            position: relative;
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            gap: 10px;
+            overflow-y: auto;
+            padding: 10px;
         }
 
-        .word {
+        /* 워드클라우드 단어 스타일 */
+        .wc-word {
             display: inline-block;
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-weight: bold;
-            transition: transform 0.2s;
+            transition: all 0.3s ease;
             cursor: default;
-            background: #FEE500;
-            color: #3c1e1e;
-        }
-
-        .word:hover {
-            transform: scale(1.1);
-        }
-
-        /* 워드클라우드 전체화면 모달 */
-        .wordcloud-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-        }
-
-        .wordcloud-modal.active {
-            display: flex;
-        }
-
-        .wordcloud-modal-content {
-            width: 90%;
-            height: 90%;
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            position: relative;
-        }
-
-        .wordcloud-modal h2 {
-            color: #3c1e1e;
-            margin-bottom: 30px;
-            font-size: 32px;
-            text-align: center;
-        }
-
-        .wordcloud-modal .wordcloud {
-            height: calc(100% - 100px);
-            font-size: 1.5em;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 12px 25px;
-            background: #FEE500;
-            color: #3c1e1e;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
             font-weight: bold;
-            cursor: pointer;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .wc-word:hover { transform: scale(1.2); z-index: 10; }
+        
+        .size-1 { font-size: 14px; color: #888; opacity: 0.7; }
+        .size-2 { font-size: 18px; color: #666; opacity: 0.8; }
+        .size-3 { font-size: 24px; color: #555; opacity: 0.9; }
+        .size-4 { font-size: 32px; color: var(--text-color); opacity: 1; }
+        .size-5 { font-size: 42px; color: #d9480f; opacity: 1; text-shadow: 2px 2px 0px rgba(0,0,0,0.1); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* 경고 오버레이 */
+        .config-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .config-msg {
+            background: white; padding: 30px; border-radius: 15px; text-align: center; max-width: 500px;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        /* 히스토리 */
-        .history-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-        }
-
-        .history-section h2 {
-            font-size: 18px;
-            margin-bottom: 15px;
-        }
-
-        .history-item {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-
-        .history-item h4 {
-            color: #3c1e1e;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .history-answers {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .setup-notice {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .setup-notice h3 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-
-        .setup-notice ol {
-            margin-left: 20px;
-            color: #856404;
-        }
-
-        .setup-notice li {
-            margin-bottom: 8px;
-        }
-
-        .setup-notice code {
-            background: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; overflow-y: auto; height: auto; }
+            .right-panel { min-height: 400px; }
         }
     </style>
 </head>
 <body>
-    <!-- 로그인 화면 -->
-    <div class="login-screen" id="loginScreen">
-        <div class="login-box">
-            <h1>🎓 실시간 수업 참여</h1>
-            <div class="role-buttons">
-                <button class="role-btn" id="teacherRoleBtn" onclick="selectRole('teacher')">선생님</button>
-                <button class="role-btn" id="studentRoleBtn" onclick="selectRole('student')">학생</button>
-            </div>
-            <div id="loginInputs"></div>
+
+    <div id="toast-container"></div>
+
+    <div id="configWarning" class="config-overlay hidden">
+        <div class="config-msg">
+            <h2 style="color:red; margin-bottom:10px;">⚠️ 설정 필요</h2>
+            <p>코드 내부의 <code>firebaseConfig</code> 값을 본인의 Firebase 프로젝트 정보로 변경해야 합니다.</p>
+            <p style="margin-top:10px; font-size:12px; color:#666;">(HTML 파일을 텍스트 에디터로 열어 수정해주세요)</p>
+            <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px;">새로고침</button>
         </div>
     </div>
 
-    <!-- 워드클라우드 전체화면 모달 -->
-    <div class="wordcloud-modal" id="wordcloudModal">
-        <div class="wordcloud-modal-content">
-            <button class="close-modal" onclick="closeWordcloudModal()">닫기</button>
-            <h2>☁️ 답변 키워드 클라우드</h2>
-            <div class="wordcloud" id="wordcloudModalContent"></div>
-        </div>
-    </div>
-
-    <div class="container hidden" id="mainContainer">
-        <!-- 메인 섹션 -->
-        <div class="main-section">
-            <!-- Firebase 설정 안내 -->
-            <div class="setup-notice" id="setupNotice">
-                <h3>⚠️ Firebase 설정이 필요합니다</h3>
-                <p style="margin-bottom: 10px;">이 앱을 사용하려면 Firebase 프로젝트가 필요합니다:</p>
-                <ol>
-                    <li><a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>에서 새 프로젝트 생성</li>
-                    <li>Realtime Database 활성화 (테스트 모드로 시작)</li>
-                    <li>웹 앱 추가 후 설정 정보 복사</li>
-                    <li>아래 코드의 <code>firebaseConfig</code> 객체를 본인의 설정으로 교체</li>
-                </ol>
-            </div>
-
-            <!-- 선생님 컨트롤 -->
-            <div class="teacher-control hidden" id="teacherControl">
-                <h2>🎓 선생님 질문하기</h2>
-                <div class="teacher-settings">
-                    <input type="number" id="totalStudentsInput" placeholder="전체 학생 수" min="1">
-                    <button onclick="setTotalStudents()">학생 수 설정</button>
-                </div>
-                <input type="text" id="questionInput" placeholder="학생들에게 질문을 입력하세요...">
-                <button class="send-btn" onclick="askQuestion()">질문 보내기</button>
-            </div>
-
-            <!-- 학생 정보 표시 -->
-            <div class="student-entry hidden" id="studentInfo"></div>
-
-            <!-- 채팅 영역 -->
-            <div class="chat-area" id="chatArea">
-                <p style="text-align: center; color: #999; padding: 50px 0;">
-                    선생님의 질문을 기다리고 있습니다...
-                </p>
-            </div>
-
-            <!-- 답변 입력 -->
-            <div class="answer-input-area hidden" id="answerInputArea">
-                <input type="text" id="answerInput" placeholder="답변을 입력하세요...">
-                <button onclick="submitAnswer()">답변 제출</button>
-            </div>
-
-            <!-- 히스토리 -->
-            <div class="history-section" id="historySection">
-                <h2>📚 이전 질문 기록</h2>
-                <div id="historyList"></div>
-            </div>
-        </div>
-
-        <!-- 통계 섹션 -->
-        <div class="stats-section">
-            <h2>📊 참여 현황</h2>
+    <div class="login-wrapper" id="loginScreen">
+        <div class="login-card">
+            <h1>🎓 실시간 수업 입장</h1>
             
-            <div class="participation-stats">
-                <div class="stat-number" id="answerCount">0</div>
-                <div class="stat-label">현재 답변 수</div>
+            <div class="role-tabs">
+                <button class="role-tab active" onclick="setRole('teacher')">선생님</button>
+                <button class="role-tab" onclick="setRole('student')">학생</button>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="number" id="studentCount">0</div>
-                    <div class="label">전체 학생</div>
+            <div id="loginForm">
+                <div id="teacherInput" class="input-group">
+                    <input type="password" id="pwInput" placeholder="비밀번호 (teacher1234)" onkeypress="handleEnter(event, login)">
                 </div>
-                <div class="stat-box">
-                    <div class="number" id="answeredCount">0</div>
-                    <div class="label">답변 완료</div>
+                <div id="studentInput" class="input-group hidden">
+                    <input type="text" id="nickInput" placeholder="사용할 닉네임 입력" onkeypress="handleEnter(event, login)">
                 </div>
-            </div>
 
-            <div class="wordcloud-header">
-                <h2>☁️ 키워드 클라우드</h2>
-                <button onclick="openWordcloudModal()">크게 보기</button>
-            </div>
-            <div class="wordcloud" id="wordcloud">
-                <p style="color: #999;">답변이 모이면 키워드가 표시됩니다</p>
+                <button class="btn-primary" onclick="login()">입장하기</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <div class="main-container hidden" id="mainScreen">
+        
+        <div class="left-panel">
+            <div id="teacherControls" class="panel-box teacher-controls hidden">
+                <h3 style="margin-bottom:10px;">📢 선생님 질문 제어판</h3>
+                <div class="control-row">
+                    <input type="number" id="totalStudentInput" placeholder="전체 학생 수" style="max-width: 120px;">
+                    <button onclick="setTotalCount()">인원 설정</button>
+                </div>
+                <div class="control-row">
+                    <input type="text" id="questionInput" placeholder="학생들에게 보낼 질문을 입력하세요..." onkeypress="handleEnter(event, sendQuestion)">
+                    <button onclick="sendQuestion()">질문 전송</button>
+                </div>
+            </div>
+
+            <div class="chat-window" id="chatWindow">
+                <div style="text-align:center; margin-top:50px; color:#666;">
+                    아직 질문이 등록되지 않았습니다.<br>선생님의 질문을 기다려주세요. ⏳
+                </div>
+            </div>
+
+            <div id="studentControls" class="input-bar hidden">
+                <input type="text" id="answerInput" placeholder="답변을 입력하세요..." onkeypress="handleEnter(event, sendAnswer)">
+                <button onclick="sendAnswer()">➤</button>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-num" id="statTotal">0</div>
+                    <div class="stat-label">전체 학생</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="statAnswered" style="color:var(--primary-color);">0</div>
+                    <div class="stat-label">제출 완료</div>
+                </div>
+            </div>
+
+            <div class="wordcloud-box">
+                <h3 style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                    ☁️ 키워드 클라우드
+                    <span style="font-size:12px; color:#999; font-weight:normal;">자동 업데이트됨</span>
+                </h3>
+                <div class="wordcloud-content" id="wordcloudContainer">
+                    <p style="color:#ccc; font-size:14px;">답변이 모이면 키워드가 나타납니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
-        // ⚠️ 여기에 본인의 Firebase 설정을 입력하세요!
+        // ==========================================
+        // ⚠️ 중요: Firebase 설정을 아래에 입력하세요
+        // ==========================================
         const firebaseConfig = {
-  apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
-  authDomain: "qa-classroom.firebaseapp.com",
-  databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "qa-classroom",
-  storageBucket: "qa-classroom.firebasestorage.app",
-  messagingSenderId: "994599583786",
-  appId: "1:994599583786:web:62a41f1f376688d4788353"
-};
+    apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
+    authDomain: "qa-classroom.firebaseapp.com",
+    databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "qa-classroom",
+    storageBucket: "qa-classroom.firebasestorage.app",
+    messagingSenderId: "994599583786",
+    appId: "1:994599583786:web:62a41f1f376688d4788353"
+  }
 
-        // Firebase 초기화
-        let database;
-        let firebaseInitialized = false;
-        
-        try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-                firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
-                firebaseInitialized = true;
-                console.log("✅ Firebase 연결 성공!");
-            } else {
-                console.warn("⚠️ Firebase 설정이 필요합니다.");
+        // ==========================================
+        // 전역 변수 및 초기화
+        // ==========================================
+        let db;
+        let currentRole = 'teacher';
+        let myName = '';
+        let isConfigured = false;
+
+        // 1. 설정 검증 및 Firebase 초기화
+        function initFirebase() {
+            if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.databaseURL.includes("YOUR_PROJECT_ID")) {
+                document.getElementById('configWarning').classList.remove('hidden');
+                return;
             }
-        } catch (error) {
-            console.error("❌ Firebase 연결 실패:", error);
+            
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                isConfigured = true;
+                console.log("✅ Firebase Connected");
+            } catch (e) {
+                console.error(e);
+                showToast("Firebase 연결 실패. 콘솔을 확인하세요.");
+            }
         }
 
-        let userRole = null;
-        let currentStudent = null;
-        let totalStudents = 0;
+        // 초기화 실행
+        initFirebase();
 
-        // 역할 선택
-        function selectRole(role) {
-            userRole = role;
-            document.getElementById('teacherRoleBtn').classList.remove('active');
-            document.getElementById('studentRoleBtn').classList.remove('active');
+        // ==========================================
+        // UI 제어 함수
+        // ==========================================
+        function setRole(role) {
+            currentRole = role;
+            const buttons = document.querySelectorAll('.role-tab');
+            buttons.forEach(btn => btn.classList.remove('active'));
             
             if (role === 'teacher') {
-                document.getElementById('teacherRoleBtn').classList.add('active');
-                document.getElementById('loginInputs').innerHTML = `
-                    <input type="password" id="passwordInput" placeholder="비밀번호 입력" onkeypress="if(event.key==='Enter') loginTeacher()">
-                    <button onclick="loginTeacher()">로그인</button>
-                `;
-                // 포커스
-                setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+                buttons[0].classList.add('active');
+                document.getElementById('teacherInput').classList.remove('hidden');
+                document.getElementById('studentInput').classList.add('hidden');
+                document.getElementById('pwInput').focus();
             } else {
-                document.getElementById('studentRoleBtn').classList.add('active');
-                document.getElementById('loginInputs').innerHTML = `
-                    <input type="text" id="nicknameInput" placeholder="닉네임 입력" onkeypress="if(event.key==='Enter') loginStudent()">
-                    <button onclick="loginStudent()">입장하기</button>
-                `;
-                // 포커스
-                setTimeout(() => document.getElementById('nicknameInput').focus(), 100);
+                buttons[1].classList.add('active');
+                document.getElementById('teacherInput').classList.add('hidden');
+                document.getElementById('studentInput').classList.remove('hidden');
+                document.getElementById('nickInput').focus();
             }
         }
 
-        // 선생님 로그인
-        function loginTeacher() {
-            const passwordInput = document.getElementById('passwordInput');
-            if (!passwordInput) {
-                alert('먼저 선생님 버튼을 클릭해주세요!');
+        function handleEnter(e, callback) {
+            if (e.key === 'Enter') callback();
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ==========================================
+        // 로직 함수 (로그인/질문/답변)
+        // ==========================================
+        function login() {
+            if (!isConfigured) {
+                showToast("⚠️ 코드에서 Firebase 설정을 먼저 완료해주세요!");
                 return;
             }
-            
-            const password = passwordInput.value;
-            console.log('선생님 로그인 시도:', password ? '비밀번호 입력됨' : '비밀번호 없음');
-            
-            if (password === 'teacher1234') {
-                console.log('✅ 비밀번호 확인 성공');
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainContainer').classList.remove('hidden');
-                document.getElementById('teacherControl').classList.remove('hidden');
-                
-                // Firebase 설정 확인
-                if (!firebaseInitialized) {
-                    console.warn('⚠️ Firebase 미초기화');
-                    document.getElementById('setupNotice').style.display = 'block';
+
+            if (currentRole === 'teacher') {
+                const pw = document.getElementById('pwInput').value;
+                if (pw === 'teacher1234') {
+                    myName = '선생님';
+                    enterClassroom();
                 } else {
-                    console.log('✅ Firebase 초기화 완료');
-                    document.getElementById('setupNotice').style.display = 'none';
-                    loadSettings();
-                    listenToCurrentQuestion();
-                    listenToAnswers();
-                    listenToHistory();
+                    showToast("❌ 비밀번호가 틀렸습니다.");
                 }
             } else {
-                console.log('❌ 비밀번호 틀림');
-                alert('비밀번호가 틀렸습니다!');
+                const nick = document.getElementById('nickInput').value.trim();
+                if (nick) {
+                    myName = nick;
+                    // 학생 등록
+                    db.ref('students/' + nick).set({
+                        name: nick,
+                        joinedAt: Date.now()
+                    });
+                    enterClassroom();
+                } else {
+                    showToast("닉네임을 입력해주세요.");
+                }
             }
         }
 
-        // 학생 로그인
-        function loginStudent() {
-            const nicknameInput = document.getElementById('nicknameInput');
-            if (!nicknameInput) {
-                alert('먼저 학생 버튼을 클릭해주세요!');
-                return;
-            }
-            
-            const nickname = nicknameInput.value.trim();
-            console.log('학생 입장 시도:', nickname);
-            
-            if (!nickname) {
-                alert('닉네임을 입력해주세요!');
-                return;
-            }
+        function enterClassroom() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainScreen').classList.remove('hidden');
 
-            currentStudent = nickname;
-            console.log('✅ 학생 입장:', nickname);
-
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContainer').classList.remove('hidden');
-            document.getElementById('studentInfo').classList.remove('hidden');
-            document.getElementById('studentInfo').innerHTML = `
-                <h2>👋 환영합니다, ${nickname}님!</h2>
-                <p style="margin-top: 5px;">선생님의 질문에 답변해주세요.</p>
-            `;
-
-            if (!firebaseInitialized) {
-                console.warn('⚠️ Firebase 미초기화');
-                document.getElementById('setupNotice').style.display = 'block';
+            if (currentRole === 'teacher') {
+                document.getElementById('teacherControls').classList.remove('hidden');
             } else {
-                console.log('✅ Firebase로 학생 등록');
-                document.getElementById('setupNotice').style.display = 'none';
+                document.getElementById('studentControls').classList.remove('hidden');
+            }
+
+            // 데이터 리스너 시작
+            startListening();
+            showToast(`👋 환영합니다, ${myName}님!`);
+        }
+
+        // ==========================================
+        // 실시간 데이터 리스닝 & 렌더링
+        // ==========================================
+        function startListening() {
+            // 1. 설정값 (학생 수)
+            db.ref('settings/totalStudents').on('value', snap => {
+                const total = snap.val() || 0;
+                document.getElementById('statTotal').textContent = total;
+            });
+
+            // 2. 현재 질문
+            db.ref('currentQuestion').on('value', snap => {
+                const data = snap.val();
+                const chatWindow = document.getElementById('chatWindow');
                 
-                // 학생 등록
-                database.ref('students/' + nickname).set({
-                    name: nickname,
-                    timestamp: Date.now()
-                }).then(() => {
-                    console.log('✅ Firebase에 학생 등록 완료');
-                }).catch((error) => {
-                    console.error('❌ 학생 등록 실패:', error);
+                if (data && data.text) {
+                    // 채팅창 초기화하고 질문 표시
+                    chatWindow.innerHTML = `
+                        <div class="message msg-teacher">
+                            <div class="sender">🎓 선생님의 질문</div>
+                            <div class="text">${data.text}</div>
+                        </div>
+                    `;
+                    // 답변들 다시 불러오기 (trigger answers listener)
+                }
+            });
+
+            // 3. 답변 목록 (채팅 버블 + 워드클라우드)
+            db.ref('answers').on('value', snap => {
+                const answersObj = snap.val();
+                const chatWindow = document.getElementById('chatWindow');
+                
+                // 기존 답변들 제거 (질문은 유지)
+                const questionNode = chatWindow.querySelector('.msg-teacher');
+                chatWindow.innerHTML = '';
+                if (questionNode) chatWindow.appendChild(questionNode);
+                else {
+                     chatWindow.innerHTML = '<div style="text-align:center; margin-top:50px; color:#666;">질문을 기다리는 중...</div>';
+                     return;
+                }
+
+                if (!answersObj) {
+                    document.getElementById('statAnswered').textContent = 0;
+                    renderWordCloud([]);
+                    return;
+                }
+
+                const answers = Object.values(answersObj);
+                
+                // 통계 업데이트
+                // 중복 닉네임 제거하여 카운트 (한 학생이 여러번 보냈을 경우 대비, 현재 로직은 1회지만)
+                const uniqueStudents = new Set(answers.map(a => a.student));
+                document.getElementById('statAnswered').textContent = uniqueStudents.size;
+
+                // 채팅창에 답변 렌더링
+                answers.forEach(ans => {
+                    const isMe = ans.student === myName;
+                    const bubble = document.createElement('div');
+                    bubble.className = `message ${isMe ? 'msg-me' : 'msg-other'}`;
+                    bubble.innerHTML = `
+                        <div class="sender">${ans.student}</div>
+                        <div class="text">${ans.text}</div>
+                    `;
+                    chatWindow.appendChild(bubble);
                 });
 
-                loadSettings();
-                listenToCurrentQuestion();
-                listenToAnswers();
-                listenToHistory();
-            }
+                // 스크롤 아래로
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+
+                // 워드 클라우드 생성
+                renderWordCloud(answers.map(a => a.text));
+            });
         }
 
-        // 전체 학생 수 설정
-        function setTotalStudents() {
-            const count = parseInt(document.getElementById('totalStudentsInput').value);
+        // ==========================================
+        // 액션 함수
+        // ==========================================
+        function setTotalCount() {
+            const count = document.getElementById('totalStudentInput').value;
             if (count > 0) {
-                database.ref('settings/totalStudents').set(count);
-                alert(`전체 학생 수가 ${count}명으로 설정되었습니다.`);
-            } else {
-                alert('1 이상의 숫자를 입력해주세요!');
+                db.ref('settings/totalStudents').set(parseInt(count));
+                showToast("✅ 전체 학생 수가 설정되었습니다.");
             }
         }
 
-        // 설정 불러오기
-        function loadSettings() {
-            database.ref('settings').on('value', (snapshot) => {
-                const settings = snapshot.val();
-                if (settings) {
-                    totalStudents = settings.totalStudents || 0;
-                    updateStats();
-                }
-            });
+        function sendQuestion() {
+            const text = document.getElementById('questionInput').value.trim();
+            if (!text) return;
 
-            database.ref('students').on('value', (snapshot) => {
-                updateStats();
-            });
-        }
-
-        // 질문하기
-        function askQuestion() {
-            const question = document.getElementById('questionInput').value.trim();
-            if (!question) {
-                alert('질문을 입력해주세요!');
-                return;
-            }
-
-            // 현재 질문을 히스토리로 이동
-            database.ref('currentQuestion').once('value', (snapshot) => {
-                const oldQuestion = snapshot.val();
-                if (oldQuestion && oldQuestion.text) {
-                    // 답변이 있으면 히스토리에 저장
-                    database.ref('answers').once('value', (answerSnapshot) => {
-                        const answers = answerSnapshot.val();
-                        if (answers) {
-                            const historyRef = database.ref('history').push();
-                            historyRef.set({
-                                question: oldQuestion.text,
-                                answers: answers,
-                                timestamp: Date.now()
-                            });
-                        }
-                    });
-                }
-            });
-
-            // 새 질문 설정
-            database.ref('currentQuestion').set({
-                text: question,
+            // 이전 답변들 삭제 (새 질문 시작)
+            db.ref('answers').remove();
+            
+            // 질문 등록
+            db.ref('currentQuestion').set({
+                text: text,
                 timestamp: Date.now()
             });
 
-            // 답변 초기화
-            database.ref('answers').remove();
-
             document.getElementById('questionInput').value = '';
+            showToast("📢 질문을 전송했습니다!");
         }
 
-        // 현재 질문 듣기
-        function listenToCurrentQuestion() {
-            database.ref('currentQuestion').on('value', (snapshot) => {
-                const question = snapshot.val();
-                if (question && question.text) {
-                    const chatArea = document.getElementById('chatArea');
-                    chatArea.innerHTML = `
-                        <div class="question-bubble">
-                            <h3>선생님의 질문</h3>
-                            <p>${question.text}</p>
-                        </div>
-                        <div class="answers-container" id="answersContainer"></div>
-                    `;
-
-                    if (currentStudent) {
-                        document.getElementById('answerInputArea').classList.remove('hidden');
-                    }
-
-                    // 기존 답변 다시 표시
-                    listenToAnswers();
-                }
-            });
-        }
-
-        // 답변 듣기
-        function listenToAnswers() {
-            database.ref('answers').on('value', (snapshot) => {
-                const answersContainer = document.getElementById('answersContainer');
-                if (answersContainer) {
-                    answersContainer.innerHTML = '';
-                    
-                    const answers = snapshot.val();
-                    if (answers) {
-                        Object.values(answers).forEach(answer => {
-                            const answerBubble = document.createElement('div');
-                            answerBubble.className = 'answer-bubble';
-                            answerBubble.innerHTML = `
-                                <div class="student-name">${answer.student}</div>
-                                <div class="answer-text">${answer.text}</div>
-                            `;
-                            answersContainer.appendChild(answerBubble);
-                        });
-
-                        // 스크롤
-                        const chatArea = document.getElementById('chatArea');
-                        chatArea.scrollTop = chatArea.scrollHeight;
-                    }
-                    
-                    updateStats();
-                    updateWordcloud();
-                }
-            });
-        }
-
-        // 답변 제출
-        function submitAnswer() {
-            if (!currentStudent) {
-                alert('먼저 닉네임을 입력하고 입장해주세요!');
-                return;
-            }
-
-            const answerText = document.getElementById('answerInput').value.trim();
-            if (!answerText) {
-                alert('답변을 입력해주세요!');
-                return;
-            }
+        function sendAnswer() {
+            const text = document.getElementById('answerInput').value.trim();
+            if (!text) return;
 
             // 중복 답변 체크
-            database.ref('answers').once('value', (snapshot) => {
-                const answers = snapshot.val();
+            db.ref('answers').once('value', snap => {
+                const answers = snap.val();
+                let already = false;
                 if (answers) {
-                    const alreadyAnswered = Object.values(answers).some(a => a.student === currentStudent);
-                    if (alreadyAnswered) {
-                        alert('이미 이 질문에 답변하셨습니다!');
-                        return;
-                    }
+                    already = Object.values(answers).some(a => a.student === myName);
                 }
 
-                // 답변 저장
-                const answerRef = database.ref('answers').push();
-                answerRef.set({
-                    student: currentStudent,
-                    text: answerText,
+                if (already) {
+                    showToast("⚠️ 이미 답변을 제출하셨습니다.");
+                    return;
+                }
+
+                // 답변 전송
+                db.ref('answers').push({
+                    student: myName,
+                    text: text,
                     timestamp: Date.now()
                 });
-
+                
                 document.getElementById('answerInput').value = '';
+                showToast("✅ 답변 제출 완료!");
             });
         }
 
-        // 히스토리 듣기
-        function listenToHistory() {
-            database.ref('history').on('value', (snapshot) => {
-                const historyList = document.getElementById('historyList');
-                historyList.innerHTML = '';
+        // ==========================================
+        // ☁️ 워드 클라우드 알고리즘 (업그레이드됨)
+        // ==========================================
+        function renderWordCloud(texts) {
+            const container = document.getElementById('wordcloudContainer');
+            container.innerHTML = '';
 
-                const history = snapshot.val();
-                if (history) {
-                    const historyArray = Object.values(history).sort((a, b) => b.timestamp - a.timestamp);
-                    
-                    historyArray.forEach((item, index) => {
-                        const answerCount = item.answers ? Object.keys(item.answers).length : 0;
-                        const students = item.answers ? Object.values(item.answers).map(a => a.student).join(', ') : '없음';
-                        
-                        const historyItem = document.createElement('div');
-                        historyItem.className = 'history-item';
-                        historyItem.innerHTML = `
-                            <h4>질문: ${item.question}</h4>
-                            <div class="history-answers">
-                                답변 ${answerCount}개: ${students}
-                            </div>
-                        `;
-                        historyList.appendChild(historyItem);
-                    });
+            if (!texts || texts.length === 0) {
+                container.innerHTML = '<p style="color:#ccc;">답변이 모이면 키워드가 나타납니다.</p>';
+                return;
+            }
+
+            // 1. 텍스트 전처리 및 단어 추출
+            const allText = texts.join(' ');
+            // 특수문자 제거 및 공백 기준 분리
+            const words = allText.replace(/[.,?!'"\(\)]/g, '').split(/\s+/);
+            
+            // 2. 불용어(Stop words) 필터링 (한국어 조사 등 간단 처리)
+            const stopWords = ['은', '는', '이', '가', '을', '를', '에', '의', '도', '저', '제', '네', '아니요', '것', '수', '등'];
+            
+            const frequency = {};
+            words.forEach(word => {
+                if (word.length > 1 && !stopWords.includes(word)) { // 1글자 제외
+                    frequency[word] = (frequency[word] || 0) + 1;
                 }
             });
-        }
 
-        // 통계 업데이트
-        function updateStats() {
-            database.ref('students').once('value', (snapshot) => {
-                const students = snapshot.val();
-                const studentCount = students ? Object.keys(students).length : 0;
-                document.getElementById('studentCount').textContent = totalStudents || studentCount;
-            });
+            // 3. 정렬 및 상위 키워드 추출
+            const sortedWords = Object.entries(frequency)
+                .sort((a, b) => b[1] - a[1]) // 빈도수 내림차순
+                .slice(0, 20); // 상위 20개만
 
-            database.ref('answers').once('value', (snapshot) => {
-                const answers = snapshot.val();
-                const answerCount = answers ? Object.keys(answers).length : 0;
-                document.getElementById('answerCount').textContent = answerCount;
+            if (sortedWords.length === 0) {
+                container.innerHTML = '<p style="color:#ccc;">분석할 유효한 단어가 없습니다.</p>';
+                return;
+            }
+
+            // 4. 폰트 크기 정규화 (최대값 기준)
+            const maxFreq = sortedWords[0][1];
+            
+            // 5. DOM 생성
+            const fragment = document.createDocumentFragment();
+            const colors = ['#3c1e1e', '#5c3c1e', '#7c5c3c', '#d9480f', '#1e3c5c'];
+
+            sortedWords.forEach(([word, count]) => {
+                const span = document.createElement('span');
+                span.textContent = word;
+                span.className = 'wc-word';
                 
-                const uniqueStudents = answers ? new Set(Object.values(answers).map(a => a.student)).size : 0;
-                document.getElementById('answeredCount').textContent = uniqueStudents;
+                // 크기 등급 계산 (1~5단계)
+                let sizeClass = 'size-1';
+                const ratio = count / maxFreq;
+                if (ratio > 0.8) sizeClass = 'size-5';
+                else if (ratio > 0.6) sizeClass = 'size-4';
+                else if (ratio > 0.4) sizeClass = 'size-3';
+                else if (ratio > 0.2) sizeClass = 'size-2';
+                
+                span.classList.add(sizeClass);
+                
+                // 약간의 랜덤 회전 및 색상
+                const rotate = Math.random() * 10 - 5; // -5 ~ 5도 회전
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                span.style.transform = `rotate(${rotate}deg)`;
+                if(sizeClass === 'size-1') span.style.color = '#aaa'; // 작은건 회색
+                
+                // 툴팁 효과 (타이틀)
+                span.title = `${count}회 언급됨`;
+
+                fragment.appendChild(span);
             });
+
+            container.appendChild(fragment);
+        }
+    </script>
+</body>
+</html>
+
+
 
