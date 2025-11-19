@@ -610,24 +610,30 @@
     <script>
         // ⚠️ 여기에 본인의 Firebase 설정을 입력하세요!
         const firebaseConfig = {
-  apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
-  authDomain: "qa-classroom.firebaseapp.com",
-  databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "qa-classroom",
-  storageBucket: "qa-classroom.firebasestorage.app",
-  messagingSenderId: "994599583786",
-  appId: "1:994599583786:web:62a41f1f376688d4788353"
-}
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
 
         // Firebase 초기화
         let database;
+        let firebaseInitialized = false;
+        
         try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            console.log("Firebase 연결 성공!");
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+                console.log("✅ Firebase 연결 성공!");
+            } else {
+                console.warn("⚠️ Firebase 설정이 필요합니다.");
+            }
         } catch (error) {
-            console.error("Firebase 연결 실패:", error);
-            alert("Firebase 설정이 필요합니다. 콘솔을 확인하세요.");
+            console.error("❌ Firebase 연결 실패:", error);
         }
 
         let userRole = null;
@@ -643,30 +649,45 @@
             if (role === 'teacher') {
                 document.getElementById('teacherRoleBtn').classList.add('active');
                 document.getElementById('loginInputs').innerHTML = `
-                    <input type="password" id="passwordInput" placeholder="비밀번호 입력">
+                    <input type="password" id="passwordInput" placeholder="비밀번호 입력" onkeypress="if(event.key==='Enter') loginTeacher()">
                     <button onclick="loginTeacher()">로그인</button>
                 `;
+                // 포커스
+                setTimeout(() => document.getElementById('passwordInput').focus(), 100);
             } else {
                 document.getElementById('studentRoleBtn').classList.add('active');
                 document.getElementById('loginInputs').innerHTML = `
-                    <input type="text" id="nicknameInput" placeholder="닉네임 입력">
+                    <input type="text" id="nicknameInput" placeholder="닉네임 입력" onkeypress="if(event.key==='Enter') loginStudent()">
                     <button onclick="loginStudent()">입장하기</button>
                 `;
+                // 포커스
+                setTimeout(() => document.getElementById('nicknameInput').focus(), 100);
             }
         }
 
         // 선생님 로그인
         function loginTeacher() {
-            const password = document.getElementById('passwordInput').value;
+            const passwordInput = document.getElementById('passwordInput');
+            if (!passwordInput) {
+                alert('먼저 선생님 버튼을 클릭해주세요!');
+                return;
+            }
+            
+            const password = passwordInput.value;
+            console.log('선생님 로그인 시도:', password ? '비밀번호 입력됨' : '비밀번호 없음');
+            
             if (password === 'teacher1234') {
+                console.log('✅ 비밀번호 확인 성공');
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainContainer').classList.remove('hidden');
                 document.getElementById('teacherControl').classList.remove('hidden');
                 
                 // Firebase 설정 확인
-                if (!database || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                if (!firebaseInitialized) {
+                    console.warn('⚠️ Firebase 미초기화');
                     document.getElementById('setupNotice').style.display = 'block';
                 } else {
+                    console.log('✅ Firebase 초기화 완료');
                     document.getElementById('setupNotice').style.display = 'none';
                     loadSettings();
                     listenToCurrentQuestion();
@@ -674,19 +695,29 @@
                     listenToHistory();
                 }
             } else {
+                console.log('❌ 비밀번호 틀림');
                 alert('비밀번호가 틀렸습니다!');
             }
         }
 
         // 학생 로그인
         function loginStudent() {
-            const nickname = document.getElementById('nicknameInput').value.trim();
+            const nicknameInput = document.getElementById('nicknameInput');
+            if (!nicknameInput) {
+                alert('먼저 학생 버튼을 클릭해주세요!');
+                return;
+            }
+            
+            const nickname = nicknameInput.value.trim();
+            console.log('학생 입장 시도:', nickname);
+            
             if (!nickname) {
                 alert('닉네임을 입력해주세요!');
                 return;
             }
 
             currentStudent = nickname;
+            console.log('✅ 학생 입장:', nickname);
 
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainContainer').classList.remove('hidden');
@@ -696,14 +727,21 @@
                 <p style="margin-top: 5px;">선생님의 질문에 답변해주세요.</p>
             `;
 
-            if (!database || firebaseConfig.apiKey === "YOUR_API_KEY") {
+            if (!firebaseInitialized) {
+                console.warn('⚠️ Firebase 미초기화');
                 document.getElementById('setupNotice').style.display = 'block';
             } else {
+                console.log('✅ Firebase로 학생 등록');
                 document.getElementById('setupNotice').style.display = 'none';
+                
                 // 학생 등록
                 database.ref('students/' + nickname).set({
                     name: nickname,
                     timestamp: Date.now()
+                }).then(() => {
+                    console.log('✅ Firebase에 학생 등록 완료');
+                }).catch((error) => {
+                    console.error('❌ 학생 등록 실패:', error);
                 });
 
                 loadSettings();
