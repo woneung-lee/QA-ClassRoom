@@ -610,14 +610,14 @@
     <script>
         // ⚠️ 여기에 본인의 Firebase 설정을 입력하세요!
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+  apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
+  authDomain: "qa-classroom.firebaseapp.com",
+  databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "qa-classroom",
+  storageBucket: "qa-classroom.firebasestorage.app",
+  messagingSenderId: "994599583786",
+  appId: "1:994599583786:web:62a41f1f376688d4788353"
+};
 
         // Firebase 초기화
         let database;
@@ -950,3 +950,4 @@
                 const uniqueStudents = answers ? new Set(Object.values(answers).map(a => a.student)).size : 0;
                 document.getElementById('answeredCount').textContent = uniqueStudents;
             });
+
