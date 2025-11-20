@@ -22,7 +22,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             height: 100vh;
-            overflow: hidden;
+            overflow: hidden; /* 전체 페이지는 고정, 내부 영역에서 스크롤 */
         }
 
         .hidden { display: none !important; }
@@ -57,7 +57,10 @@
             max-width: 1200px; margin: 0 auto; height: 100vh; padding: 20px;
             display: grid; grid-template-columns: 2fr 1.2fr; gap: 20px;
         }
-        .left-panel, .right-panel { display: flex; flex-direction: column; gap: 15px; height: 100%; }
+        .left-panel, .right-panel {
+            display: flex; flex-direction: column; gap: 15px;
+            height: 100%; min-height: 0; /* 내부 스크롤이 가능하도록 설정 */
+        }
         
         .panel-box { background: var(--white); border-radius: 15px; padding: 20px; box-shadow: var(--shadow); }
 
@@ -75,7 +78,8 @@
 
         /* 채팅 영역 */
         .chat-window {
-            flex: 1; overflow-y: auto; background: #abc1d1; border-radius: 15px; padding: 20px;
+            flex: 1; min-height: 0;
+            overflow-y: auto; background: #abc1d1; border-radius: 15px; padding: 20px;
             display: flex; flex-direction: column; gap: 15px;
         }
         .message { max-width: 80%; padding: 10px 15px; border-radius: 12px; position: relative; animation: fadeIn 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
@@ -97,10 +101,14 @@
         .stat-num { font-size: 28px; font-weight: bold; color: var(--text-color); }
         
         .wordcloud-box {
-            flex: 1; background: var(--white); border-radius: 15px; padding: 20px;
+            flex: 1; min-height: 0;
+            background: var(--white); border-radius: 15px; padding: 20px;
             display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden;
         }
-        .wordcloud-content { flex: 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; overflow-y: auto; }
+        .wordcloud-content {
+            flex: 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+            gap: 10px; overflow-y: auto;
+        }
         .wc-word { display: inline-block; font-weight: bold; transition: transform 0.3s; cursor: default; }
         .wc-word:hover { transform: scale(1.2); z-index: 10; }
         .size-1 { font-size: 14px; color: #aaa; }
@@ -109,11 +117,13 @@
         .size-4 { font-size: 32px; color: var(--text-color); }
         .size-5 { font-size: 42px; color: #d9480f; text-shadow: 2px 2px 0px rgba(0,0,0,0.1); }
 
-        /* 3. 히스토리 모달 */
+        /* 공통 모달 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 2000; display: flex; justify-content: center; align-items: center;
         }
+
+        /* 3. 히스토리 모달 */
         .modal-content {
             width: 90%; height: 90%; background: #f0f2f5; border-radius: 20px; display: flex; overflow: hidden;
         }
@@ -135,9 +145,35 @@
         .h-answers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
         .h-answer-card { background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
 
+        /* 답변 수정 모달 */
+        .edit-modal-box {
+            width: 90%; max-width: 500px;
+            background: #ffffff; border-radius: 16px;
+            padding: 20px; box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .edit-modal-box h3 { margin-bottom: 8px; }
+        #editAnswerTextarea {
+            width: 100%; min-height: 120px;
+            padding: 10px; border-radius: 8px; border: 1px solid #ddd;
+            resize: vertical; font-family: inherit; font-size: 14px;
+        }
+        .edit-modal-actions {
+            display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;
+        }
+        .btn-secondary {
+            padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; background: #f5f5f5;
+            font-size: 14px;
+        }
+        .btn-save {
+            padding: 8px 14px; border-radius: 8px; border: none; background: var(--primary-color);
+            font-size: 14px; font-weight: bold;
+        }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 768px) {
+            body { overflow:auto; height:auto; }
             .main-container { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; overflow-y: auto; height: auto; }
             .modal-content { flex-direction: column; }
             .history-sidebar { width: 100%; height: 30%; }
@@ -210,6 +246,8 @@
                     <div class="stat-num" id="statTotal">0</div>
                     <div class="stat-label">전체 학생</div>
                 </div>
+            </div>
+            <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-num" id="statAnswered" style="color:var(--primary-color);">0</div>
                     <div class="stat-label">제출 완료</div>
@@ -219,6 +257,18 @@
             <div class="wordcloud-box">
                 <h3>☁️ 실시간 키워드</h3>
                 <div class="wordcloud-content" id="liveWordcloud"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 답변 수정 모달 -->
+    <div id="editModal" class="modal-overlay hidden">
+        <div class="edit-modal-box">
+            <h3>✏️ 답변 수정</h3>
+            <textarea id="editAnswerTextarea" placeholder="수정할 내용을 입력하세요."></textarea>
+            <div class="edit-modal-actions">
+                <button class="btn-secondary" onclick="closeEditModal()">취소</button>
+                <button class="btn-save" onclick="saveEditAnswer()">저장</button>
             </div>
         </div>
     </div>
@@ -278,6 +328,7 @@
         let myName = '';
         let isConfigured = false;
         let historyData = {}; // 로컬 히스토리 캐시
+        let editingAnswerKey = null; // 현재 수정 중인 답변 key
 
         function initFirebase() {
             if (firebaseConfig.apiKey === "YOUR_API_KEY") {
@@ -355,7 +406,7 @@
         }
 
         // ==========================================
-        // 실시간 데이터 리스닝 (수정 가능 답변 반영)
+        // 실시간 데이터 리스닝
         // ==========================================
         function startListening() {
             // 전체 인원
@@ -377,7 +428,6 @@
             // 답변 목록
             db.ref('answers').on('value', s => {
                 const raw = s.val() || {};
-                // key를 포함하도록 변환
                 const answers = Object.entries(raw).map(([key, val]) => ({ key, ...val }));
 
                 const chat = document.getElementById('chatWindow');
@@ -392,11 +442,9 @@
                 }
 
                 if (answers.length > 0) {
-                    // 통계: 서로 다른 student 기준
                     const unique = new Set(answers.map(a => a.student));
                     document.getElementById('statAnswered').textContent = unique.size;
 
-                    // 채팅 버블 렌더링
                     answers.forEach(a => {
                         const d = document.createElement('div');
                         d.className = `message ${a.student === myName ? 'msg-me' : 'msg-other'}`;
@@ -443,30 +491,26 @@
             const text = document.getElementById('questionInput').value.trim();
             if (!text) return;
 
-            // 1. 현재 상태를 히스토리에 저장 (Snapshot)
             db.ref('currentQuestion').once('value', qSnap => {
                 const oldQ = qSnap.val();
                 if (oldQ && oldQ.text) {
                     db.ref('answers').once('value', aSnap => {
                         const oldA = aSnap.val() || {};
-                        // 히스토리 노드에 push
                         db.ref('history').push({
                             question: oldQ.text,
                             answers: oldA,
                             timestamp: Date.now()
                         });
-                        // 저장 후 새 질문 설정
                         setNewQuestion(text);
                     });
                 } else {
-                    // 첫 질문인 경우 바로 설정
                     setNewQuestion(text);
                 }
             });
         }
 
         function setNewQuestion(text) {
-            db.ref('answers').remove(); // 답변 초기화
+            db.ref('answers').remove();
             db.ref('currentQuestion').set({ text: text, timestamp: Date.now() });
             document.getElementById('questionInput').value = '';
             showToast("📢 새 질문이 등록되었습니다.");
@@ -476,11 +520,49 @@
         // 답변 작성 및 수정 로직
         // ==========================================
         function prepareEditAnswer(answerKey, currentText) {
-            const input = document.getElementById('answerInput');
-            input.value = currentText;           // 기존 내용 불러오기
-            input.dataset.editKey = answerKey;   // 수정 대상 답변의 key 저장
-            input.focus();
-            showToast("✏️ 내용을 수정한 뒤 다시 제출 버튼을 눌러주세요.");
+            editingAnswerKey = answerKey;
+            const ta = document.getElementById('editAnswerTextarea');
+            ta.value = currentText;
+            document.getElementById('editModal').classList.remove('hidden');
+            ta.focus();
+        }
+
+        function closeEditModal() {
+            editingAnswerKey = null;
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editAnswerTextarea').value = '';
+        }
+
+        function saveEditAnswer() {
+            const text = document.getElementById('editAnswerTextarea').value.trim();
+            if (!text) {
+                showToast("내용을 입력하세요.");
+                return;
+            }
+            if (!editingAnswerKey) {
+                showToast("⚠️ 수정할 답변 정보를 찾을 수 없습니다.");
+                return;
+            }
+
+            db.ref('answers/' + editingAnswerKey).once('value').then(snap => {
+                const target = snap.val();
+                if (!target) {
+                    showToast("⚠️ 수정할 답변을 찾을 수 없습니다.");
+                    return;
+                }
+                if (target.student !== myName) {
+                    showToast("⚠️ 내 답변만 수정할 수 있습니다.");
+                    return;
+                }
+                return db.ref('answers/' + editingAnswerKey).update({
+                    text: text,
+                    editedAt: Date.now()
+                }).then(() => {
+                    showToast("✏️ 답변이 수정되었습니다.");
+                });
+            }).finally(() => {
+                closeEditModal();
+            });
         }
 
         function sendAnswer() {
@@ -488,48 +570,24 @@
             const text = input.value.trim();
             if (!text) return;
 
-            const editKey = input.dataset.editKey;  // 있으면 "수정 모드", 없으면 "새 답변 모드"
-
             db.ref('answers').once('value', s => {
                 const all = s.val() || {};
                 const entries = Object.entries(all);
                 const myEntry = entries.find(([key, a]) => a.student === myName);
 
-                if (editKey) {
-                    // ✏️ 수정 모드
-                    const target = all[editKey];
-
-                    if (!target) {
-                        showToast("⚠️ 수정할 답변을 찾을 수 없습니다.");
-                    } else if (target.student !== myName) {
-                        // 혹시라도 다른 사람 답변 key가 들어온 경우 방어
-                        showToast("⚠️ 내 답변만 수정할 수 있습니다.");
-                    } else {
-                        db.ref('answers/' + editKey).update({
-                            text: text,
-                            editedAt: Date.now()
-                        });
-                        showToast("✏️ 답변이 수정되었습니다.");
-                    }
-                } else {
-                    // 새 답변 작성 모드
-                    if (myEntry) {
-                        // 이미 내 답변이 존재하면 새로 push하지 않음 → 1인 1답 유지
-                        showToast("⚠️ 이미 답변했습니다. 내 답변 말풍선의 ✏️ 버튼으로 수정할 수 있습니다.");
-                        return;
-                    }
-
-                    db.ref('answers').push({
-                        student: myName,
-                        text: text,
-                        timestamp: Date.now()
-                    });
-                    showToast("✅ 답변이 제출되었습니다.");
+                if (myEntry) {
+                    showToast("⚠️ 이미 답변했습니다. 내 답변 말풍선의 ✏️ 버튼으로 수정할 수 있습니다.");
+                    input.value = '';
+                    return;
                 }
 
-                // 입력창 초기화 및 수정 상태 해제
+                db.ref('answers').push({
+                    student: myName,
+                    text: text,
+                    timestamp: Date.now()
+                });
+                showToast("✅ 답변이 제출되었습니다.");
                 input.value = '';
-                delete input.dataset.editKey;
             });
         }
 
@@ -549,8 +607,8 @@
             
             const check = prompt("초기화하려면 '초기화'라고 입력해주세요.");
             if (check === '초기화') {
-                db.ref('/').set({}); // 루트 노드 삭제 (전체 초기화)
-                location.reload(); // 페이지 새로고침
+                db.ref('/').set({});
+                location.reload();
             }
         }
 
@@ -567,7 +625,7 @@
                 list.innerHTML = '';
                 historyData = s.val() || {};
                 
-                const keys = Object.keys(historyData).sort((a,b) => historyData[b].timestamp - historyData[a].timestamp); // 최신순
+                const keys = Object.keys(historyData).sort((a,b) => historyData[b].timestamp - historyData[a].timestamp);
                 
                 if (keys.length === 0) {
                     list.innerHTML = '<div style="padding:20px; color:#888;">기록된 질문이 없습니다.</div>';
@@ -586,7 +644,6 @@
                     list.appendChild(div);
                 });
 
-                // 첫 번째 항목 자동 선택
                 if(keys.length > 0) loadHistoryDetail(keys[0], list.children[0]);
             });
         }
@@ -622,14 +679,12 @@
         }
 
         // ==========================================
-        // 워드클라우드 엔진 (한국어 전처리 개선 버전)
+        // 워드클라우드 엔진 (한국어 전처리)
         // ==========================================
         function normalizeKoreanWord(raw) {
-            // 앞뒤 공백 및 기본 문장부호 제거
             let w = raw.replace(/[.,?!'"\(\)]/g, '').trim();
             if (!w) return '';
 
-            // 완전히 제외할 단어 목록
             const stopWordsExact = [
                 '은','는','이','가','을','를','에','의','도','네','저','제','것','수',
                 '그리고','그래서','그러면','하지만','그런데',
@@ -642,11 +697,9 @@
 
             if (stopWordsExact.includes(w)) return '';
 
-            // 조사 제거 (책을 -> 책)
             const particlePattern = /(은|는|이|가|을|를|에|에서|에게|한테|으로|로|와|과|랑|하고|께|부터|까지)$/;
             w = w.replace(particlePattern, '');
 
-            // 공손 종결어미 제거 (공부합니다 -> 공부, 좋았어요 -> 좋았)
             const endingPattern1 = /(입니다|합니다|했습니다|해요|했어요|했습니까|됩니까|됩니다|됐습니다)$/;
             const endingPattern2 = /(이에요|예요|에요|네요|아요|어요|였어요|이었어요|더라고요|더라구요)$/;
 
@@ -710,6 +763,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
