@@ -80,7 +80,7 @@
         }
         .message { max-width: 80%; padding: 10px 15px; border-radius: 12px; position: relative; animation: fadeIn 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message .sender { font-size: 12px; margin-bottom: 4px; opacity: 0.7; }
-        .message .text { font-size: 15px; line-height: 1.4; word-break: break-all; }
+        .message .text { font-size: 15px; line-height: 1.4; word-break: break-all; display: inline-block; }
         .msg-teacher { align-self: center; background: var(--white); border: 2px solid var(--primary-color); width: 90%; max-width: 90%; text-align: center; margin-bottom: 20px; }
         .msg-teacher .text { font-size: 18px; font-weight: bold; }
         .msg-other { align-self: flex-start; background: var(--white); border-top-left-radius: 0; }
@@ -160,8 +160,8 @@
         <div class="login-card">
             <h1>📢 생각 나누기 </h1>
             <div class="role-tabs">
-                <button class="role-tab active" onclick="setRole('teacher')">선생님</button>
-                <button class="role-tab" onclick="setRole('student')">학생</button>
+                <button class="role-tab active" onclick="setRole('teacher', event)">선생님</button>
+                <button class="role-tab" onclick="setRole('student', event)">학생</button>
             </div>
             <div id="loginForm">
                 <div id="teacherInput" class="input-group">
@@ -230,8 +230,7 @@
                     <span>📚 지난 질문 목록</span>
                     <button onclick="closeHistory()" style="background:none; border:none; color:white; font-size:1.2rem;">✕</button>
                 </div>
-                <div class="history-list" id="historyList">
-                    </div>
+                <div class="history-list" id="historyList"></div>
             </div>
             <div class="history-main">
                 <div class="history-detail-box">
@@ -253,6 +252,7 @@
         </div>
     </div>
 
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -261,14 +261,14 @@
         // ⚠️ Firebase 설정 (반드시 수정 필요)
         // ==========================================
         const firebaseConfig = {
-    apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
-    authDomain: "qa-classroom.firebaseapp.com",
-    databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "qa-classroom",
-    storageBucket: "qa-classroom.firebasestorage.app",
-    messagingSenderId: "994599583786",
-    appId: "1:994599583786:web:62a41f1f376688d4788353"
-  };
+            apiKey: "AIzaSyDEys1p0xD5AVlGGbMFYV5GaD6yvzlNHhY",
+            authDomain: "qa-classroom.firebaseapp.com",
+            databaseURL: "https://qa-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "qa-classroom",
+            storageBucket: "qa-classroom.firebasestorage.app",
+            messagingSenderId: "994599583786",
+            appId: "1:994599583786:web:62a41f1f376688d4788353"
+        };
 
         // ==========================================
         // 초기화 및 변수
@@ -294,10 +294,10 @@
         // ==========================================
         // UI 및 유틸리티
         // ==========================================
-        function setRole(role) {
+        function setRole(role, ev) {
             currentRole = role;
             document.querySelectorAll('.role-tab').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            if (ev && ev.target) ev.target.classList.add('active');
             
             if (role === 'teacher') {
                 document.getElementById('teacherInput').classList.remove('hidden');
@@ -311,12 +311,18 @@
         }
 
         function handleEnter(e, callback) { if (e.key === 'Enter') callback(); }
+
         function showToast(msg) {
-            const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
             document.getElementById('toast-container').appendChild(t);
             setTimeout(()=>t.remove(), 3000);
         }
-        function formatTime(ts) { return new Date(ts).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit', second:'2-digit' }); }
+
+        function formatTime(ts) {
+            return new Date(ts).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit', second:'2-digit' });
+        }
 
         // ==========================================
         // 로그인 & 입장
@@ -349,11 +355,15 @@
         }
 
         // ==========================================
-        // 실시간 데이터 리스닝
+        // 실시간 데이터 리스닝 (수정 가능 답변 반영)
         // ==========================================
         function startListening() {
-            db.ref('settings/totalStudents').on('value', s => document.getElementById('statTotal').textContent = s.val() || 0);
+            // 전체 인원
+            db.ref('settings/totalStudents').on('value', s =>
+                document.getElementById('statTotal').textContent = s.val() || 0
+            );
 
+            // 현재 질문
             db.ref('currentQuestion').on('value', s => {
                 const q = s.val();
                 const chat = document.getElementById('chatWindow');
@@ -364,33 +374,57 @@
                 }
             });
 
+            // 답변 목록
             db.ref('answers').on('value', s => {
-                const answers = s.val() ? Object.values(s.val()) : [];
+                const raw = s.val() || {};
+                // key를 포함하도록 변환
+                const answers = Object.entries(raw).map(([key, val]) => ({ key, ...val }));
+
                 const chat = document.getElementById('chatWindow');
-                
-                // 기존 메시지 유지하면서 답변만 추가/갱신 (간단히 재렌더링)
+
+                // 기존 질문 말풍선 유지
                 const qElem = chat.querySelector('.msg-teacher');
                 chat.innerHTML = '';
-                if (qElem) chat.appendChild(qElem);
-                else chat.innerHTML = `<div style="text-align:center; margin-top:50px; color:#666;">진행 중인 질문이 없습니다.</div>`;
+                if (qElem) {
+                    chat.appendChild(qElem);
+                } else {
+                    chat.innerHTML = `<div style="text-align:center; margin-top:50px; color:#666;">진행 중인 질문이 없습니다.</div>`;
+                }
 
                 if (answers.length > 0) {
-                    // 통계
+                    // 통계: 서로 다른 student 기준
                     const unique = new Set(answers.map(a => a.student));
                     document.getElementById('statAnswered').textContent = unique.size;
 
-                    // 채팅 버블
+                    // 채팅 버블 렌더링
                     answers.forEach(a => {
                         const d = document.createElement('div');
-                        d.className = `message ${a.student===myName ? 'msg-me':'msg-other'}`;
-                        d.innerHTML = `<div class="sender">${a.student}</div><div class="text">${a.text}</div>`;
+                        d.className = `message ${a.student === myName ? 'msg-me' : 'msg-other'}`;
+                        d.innerHTML = `
+                            <div class="sender">${a.student}</div>
+                            <div class="text">${a.text}</div>
+                        `;
+
+                        // 내 답변에만 ✏️ 수정 버튼 노출
+                        if (a.student === myName) {
+                            const editBtn = document.createElement('button');
+                            editBtn.className = 'btn-icon';
+                            editBtn.style.marginLeft = '8px';
+                            editBtn.textContent = '✏️';
+                            editBtn.title = '내 답변 수정';
+                            editBtn.onclick = () => prepareEditAnswer(a.key, a.text);
+                            d.appendChild(editBtn);
+                        }
+
                         chat.appendChild(d);
                     });
                     chat.scrollTop = chat.scrollHeight;
                 } else {
                     document.getElementById('statAnswered').textContent = 0;
                 }
-                renderWordCloud(answers.map(a=>a.text), 'liveWordcloud');
+
+                // 워드클라우드 갱신
+                renderWordCloud(answers.map(a => a.text), 'liveWordcloud');
             });
         }
 
@@ -399,7 +433,10 @@
         // ==========================================
         function setTotalCount() {
             const n = document.getElementById('totalStudentInput').value;
-            if(n > 0) { db.ref('settings/totalStudents').set(parseInt(n)); showToast("인원 설정 완료"); }
+            if(n > 0) {
+                db.ref('settings/totalStudents').set(parseInt(n));
+                showToast("인원 설정 완료");
+            }
         }
 
         function sendQuestion() {
@@ -435,21 +472,69 @@
             showToast("📢 새 질문이 등록되었습니다.");
         }
 
+        // ==========================================
+        // 답변 작성 및 수정 로직
+        // ==========================================
+        function prepareEditAnswer(answerKey, currentText) {
+            const input = document.getElementById('answerInput');
+            input.value = currentText;           // 기존 내용 불러오기
+            input.dataset.editKey = answerKey;   // 수정 대상 답변의 key 저장
+            input.focus();
+            showToast("✏️ 내용을 수정한 뒤 다시 제출 버튼을 눌러주세요.");
+        }
+
         function sendAnswer() {
-            const text = document.getElementById('answerInput').value.trim();
+            const input = document.getElementById('answerInput');
+            const text = input.value.trim();
             if (!text) return;
+
+            const editKey = input.dataset.editKey;  // 있으면 "수정 모드", 없으면 "새 답변 모드"
+
             db.ref('answers').once('value', s => {
-                const ans = s.val();
-                if (ans && Object.values(ans).some(a => a.student === myName)) {
-                    showToast("⚠️ 이미 답변했습니다."); return;
+                const all = s.val() || {};
+                const entries = Object.entries(all);
+                const myEntry = entries.find(([key, a]) => a.student === myName);
+
+                if (editKey) {
+                    // ✏️ 수정 모드
+                    const target = all[editKey];
+
+                    if (!target) {
+                        showToast("⚠️ 수정할 답변을 찾을 수 없습니다.");
+                    } else if (target.student !== myName) {
+                        // 혹시라도 다른 사람 답변 key가 들어온 경우 방어
+                        showToast("⚠️ 내 답변만 수정할 수 있습니다.");
+                    } else {
+                        db.ref('answers/' + editKey).update({
+                            text: text,
+                            editedAt: Date.now()
+                        });
+                        showToast("✏️ 답변이 수정되었습니다.");
+                    }
+                } else {
+                    // 새 답변 작성 모드
+                    if (myEntry) {
+                        // 이미 내 답변이 존재하면 새로 push하지 않음 → 1인 1답 유지
+                        showToast("⚠️ 이미 답변했습니다. 내 답변 말풍선의 ✏️ 버튼으로 수정할 수 있습니다.");
+                        return;
+                    }
+
+                    db.ref('answers').push({
+                        student: myName,
+                        text: text,
+                        timestamp: Date.now()
+                    });
+                    showToast("✅ 답변이 제출되었습니다.");
                 }
-                db.ref('answers').push({ student: myName, text: text, timestamp: Date.now() });
-                document.getElementById('answerInput').value = '';
+
+                // 입력창 초기화 및 수정 상태 해제
+                input.value = '';
+                delete input.dataset.editKey;
             });
         }
 
         // ==========================================
-        // [요청 3] 삭제 및 초기화 기능
+        // 삭제 및 초기화 기능
         // ==========================================
         function clearCurrentQuestion() {
             if(!confirm("현재 질문을 종료하고 답변을 초기화할까요?\n(기록은 히스토리에 남지 않습니다)")) return;
@@ -462,7 +547,6 @@
         function resetAllData() {
             if(!confirm("🚨 정말로 모든 데이터를 삭제하시겠습니까?\n히스토리, 학생 목록 등 모든 내용이 사라집니다.")) return;
             
-            // 위험하므로 한 번 더 확인
             const check = prompt("초기화하려면 '초기화'라고 입력해주세요.");
             if (check === '초기화') {
                 db.ref('/').set({}); // 루트 노드 삭제 (전체 초기화)
@@ -471,7 +555,7 @@
         }
 
         // ==========================================
-        // [요청 1] 히스토리 뷰어 로직
+        // 히스토리 뷰어 로직
         // ==========================================
         function openHistory() {
             const modal = document.getElementById('historyModal');
@@ -508,7 +592,6 @@
         }
 
         function loadHistoryDetail(key, element) {
-            // UI 활성화 처리
             document.querySelectorAll('.history-item').forEach(e => e.classList.remove('active'));
             if(element) element.classList.add('active');
 
@@ -530,7 +613,6 @@
                     card.innerHTML = `<div style="font-weight:bold; font-size:12px; margin-bottom:3px;">${a.student}</div><div>${a.text}</div>`;
                     answersGrid.appendChild(card);
                 });
-                // 히스토리용 워드클라우드 렌더링
                 renderWordCloud(answers.map(a => a.text), 'historyWordcloud');
             }
         }
@@ -540,8 +622,43 @@
         }
 
         // ==========================================
-        // 워드클라우드 엔진 (공용)
+        // 워드클라우드 엔진 (한국어 전처리 개선 버전)
         // ==========================================
+        function normalizeKoreanWord(raw) {
+            // 앞뒤 공백 및 기본 문장부호 제거
+            let w = raw.replace(/[.,?!'"\(\)]/g, '').trim();
+            if (!w) return '';
+
+            // 완전히 제외할 단어 목록
+            const stopWordsExact = [
+                '은','는','이','가','을','를','에','의','도','네','저','제','것','수',
+                '그리고','그래서','그러면','하지만','그런데',
+                '합니다','합니다만','했습니다','했어요','해요',
+                '있어요','없어요','같아요','거에요','거예요','거야',
+                '입니다','였습니다','이었습니다',
+                '예요','에요','이에요',
+                '정도','이번','이번에','오늘','어제','내일'
+            ];
+
+            if (stopWordsExact.includes(w)) return '';
+
+            // 조사 제거 (책을 -> 책)
+            const particlePattern = /(은|는|이|가|을|를|에|에서|에게|한테|으로|로|와|과|랑|하고|께|부터|까지)$/;
+            w = w.replace(particlePattern, '');
+
+            // 공손 종결어미 제거 (공부합니다 -> 공부, 좋았어요 -> 좋았)
+            const endingPattern1 = /(입니다|합니다|했습니다|해요|했어요|했습니까|됩니까|됩니다|됐습니다)$/;
+            const endingPattern2 = /(이에요|예요|에요|네요|아요|어요|였어요|이었어요|더라고요|더라구요)$/;
+
+            w = w.replace(endingPattern1, '');
+            w = w.replace(endingPattern2, '');
+
+            w = w.trim();
+            if (w.length < 2) return '';
+
+            return w;
+        }
+
         function renderWordCloud(texts, containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -552,16 +669,20 @@
             }
 
             const allText = texts.join(' ');
-            const words = allText.replace(/[.,?!'"\(\)]/g, '').split(/\s+/);
-            const stopWords = ['은','는','이','가','을','를','에','의','도','네','저','제','것','수'];
-            
+            const rawWords = allText.split(/\s+/);
+
             const freq = {};
-            words.forEach(w => {
-                if(w.length > 1 && !stopWords.includes(w)) freq[w] = (freq[w] || 0) + 1;
+            rawWords.forEach(raw => {
+                const w = normalizeKoreanWord(raw);
+                if (!w) return;
+                freq[w] = (freq[w] || 0) + 1;
             });
 
             const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,20);
-            if(sorted.length===0) { container.innerHTML = '<p style="color:#ccc;">키워드 없음</p>'; return; }
+            if(sorted.length===0) {
+                container.innerHTML = '<p style="color:#ccc;">키워드 없음</p>';
+                return;
+            }
 
             const max = sorted[0][1];
             const colors = ['#3c1e1e', '#5c3c1e', '#7c5c3c', '#d9480f', '#1e3c5c'];
@@ -570,21 +691,26 @@
                 const span = document.createElement('span');
                 span.textContent = word;
                 span.className = 'wc-word';
-                
+
                 let size = 'size-1';
-                const r = count/max;
-                if(r>0.8) size='size-5'; else if(r>0.6) size='size-4'; else if(r>0.4) size='size-3'; else if(r>0.2) size='size-2';
-                
+                const r = count / max;
+                if (r > 0.8)      size = 'size-5';
+                else if (r > 0.6) size = 'size-4';
+                else if (r > 0.4) size = 'size-3';
+                else if (r > 0.2) size = 'size-2';
+
                 span.classList.add(size);
-                span.style.color = colors[Math.floor(Math.random()*colors.length)];
-                span.style.transform = `rotate(${Math.random()*10-5}deg)`;
+                span.style.color = colors[Math.floor(Math.random() * colors.length)];
+                span.style.transform = `rotate(${Math.random()*10 - 5}deg)`;
                 span.title = `${count}회`;
+
                 container.appendChild(span);
             });
         }
     </script>
 </body>
 </html>
+
 
 
 
